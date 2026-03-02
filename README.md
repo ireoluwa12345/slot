@@ -1,3 +1,5 @@
+<img src="/slot-logo.png">
+
 # Slot
 
 A minimal Redis-compatible in-memory key-value store written in Go.
