@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -17,6 +17,8 @@ func main() {
 	}
 
 	l, err := net.Listen("tcp", ":"+port)
+
+	fmt.Printf("listening to port %s", port)
 
 	if err != nil {
 		fmt.Println(err)
@@ -31,16 +33,36 @@ func main() {
 	}
 
 	for {
-		buffer := make([]byte, 1024)
-		_, err := conn.Read(buffer)
+		resp := NewReader(conn)
+		value, err := resp.Read()
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
 			fmt.Println(err)
 			return
 		}
 
-		conn.Write([]byte("+OK\r\n"))
+		if value.typ != "array" {
+			fmt.Println("Invalid request, expected array")
+			continue
+		}
+
+		if len(value.array) == 0 {
+			fmt.Println("Invalid request, expected array length > 0")
+			continue
+		}
+
+		command := strings.ToUpper(value.array[0].bulk)
+		args := value.array[1:]
+
+		writer := NewWriter(conn)
+
+		handler, ok := Handlers[command]
+		if !ok {
+			fmt.Println("Invalid command: ", command)
+			writer.Write(Value{typ: "string", str: ""})
+			continue
+		}
+
+		result := handler(args)
+		writer.Write(result)
 	}
 }
