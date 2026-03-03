@@ -1,13 +1,17 @@
 package main
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/ireoluwa12345/slot/internal/resp"
+)
 
 var slot = map[string]string{}
 var hashedSlot = map[string]map[string]string{}
 var slotMutex = sync.RWMutex{}
 var hashedSlotMutex = sync.RWMutex{}
 
-var Handlers = map[string]func([]Value) Value{
+var Handlers = map[string]func([]resp.Value) resp.Value{
 	"PING":    ping,
 	"SET":     set,
 	"GET":     get,
@@ -16,55 +20,55 @@ var Handlers = map[string]func([]Value) Value{
 	"HGETALL": hgetall,
 }
 
-func ping(args []Value) Value {
+func ping(args []resp.Value) resp.Value {
 	if len(args) == 0 {
-		return Value{typ: "string", str: "PONG"}
+		return resp.Value{Typ: "string", Str: "PONG"}
 	}
 
-	return Value{typ: "string", str: args[0].bulk}
+	return resp.Value{Typ: "string", Str: args[0].Bulk}
 }
 
-func set(args []Value) Value {
+func set(args []resp.Value) resp.Value {
 	if len(args) != 2 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}
+		return resp.Value{Typ: "error", Str: "ERR wrong number of arguments for 'set' command"}
 	}
 
-	key := args[0].bulk
-	value := args[1].bulk
+	key := args[0].Bulk
+	value := args[1].Bulk
 
 	slotMutex.Lock()
 	slot[key] = value
 	slotMutex.Unlock()
 
-	return Value{typ: "string", str: "OK"}
+	return resp.Value{Typ: "string", Str: "OK"}
 }
 
-func get(args []Value) Value {
+func get(args []resp.Value) resp.Value {
 	if len(args) != 1 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+		return resp.Value{Typ: "error", Str: "ERR wrong number of arguments for 'get' command"}
 	}
 
-	key := args[0].bulk
+	key := args[0].Bulk
 
 	slotMutex.RLock()
 	value, ok := slot[key]
 	slotMutex.RUnlock()
 
 	if !ok {
-		return Value{typ: "null"}
+		return resp.Value{Typ: "null"}
 	}
 
-	return Value{typ: "bulk", bulk: value}
+	return resp.Value{Typ: "bulk", Bulk: value}
 }
 
-func hset(args []Value) Value {
+func hset(args []resp.Value) resp.Value {
 	if len(args) != 3 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'hset' command"}
+		return resp.Value{Typ: "error", Str: "ERR wrong number of arguments for 'hset' command"}
 	}
 
-	hash := args[0].bulk
-	key := args[1].bulk
-	value := args[2].bulk
+	hash := args[0].Bulk
+	key := args[1].Bulk
+	value := args[2].Bulk
 
 	hashedSlotMutex.Lock()
 	if _, ok := hashedSlot[hash]; !ok {
@@ -73,52 +77,52 @@ func hset(args []Value) Value {
 	hashedSlot[hash][key] = value
 	hashedSlotMutex.Unlock()
 
-	return Value{typ: "string", str: "OK"}
+	return resp.Value{Typ: "string", Str: "OK"}
 }
 
-func hget(args []Value) Value {
+func hget(args []resp.Value) resp.Value {
 	if len(args) != 2 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'hget' command"}
+		return resp.Value{Typ: "error", Str: "ERR wrong number of arguments for 'hget' command"}
 	}
 
-	hash := args[0].bulk
-	key := args[1].bulk
+	hash := args[0].Bulk
+	key := args[1].Bulk
 
 	hashedSlotMutex.RLock()
 	value, ok := hashedSlot[hash][key]
 	hashedSlotMutex.RUnlock()
 
 	if !ok {
-		return Value{typ: "null"}
+		return resp.Value{Typ: "null"}
 	}
 
-	return Value{typ: "bulk", bulk: value}
+	return resp.Value{Typ: "bulk", Bulk: value}
 }
 
-func hgetall(args []Value) Value {
+func hgetall(args []resp.Value) resp.Value {
 	if len(args) != 1 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'hgetall' command"}
+		return resp.Value{Typ: "error", Str: "ERR wrong number of arguments for 'hgetall' command"}
 	}
 
-	hash := args[0].bulk
+	hash := args[0].Bulk
 
 	hashedSlotMutex.RLock()
 	values, ok := hashedSlot[hash]
 	hashedSlotMutex.RUnlock()
 
 	if !ok {
-		return Value{typ: "null"}
+		return resp.Value{Typ: "null"}
 	}
 
-	array := make([]Value, len(values))
+	array := make([]resp.Value, len(values))
 	i := 0
 	for k, v := range values {
-		array[i] = Value{typ: "array", array: []Value{
-			Value{typ: "bulk", bulk: k},
-			Value{typ: "bulk", bulk: v},
+		array[i] = resp.Value{Typ: "array", Array: []resp.Value{
+			resp.Value{Typ: "bulk", Bulk: k},
+			resp.Value{Typ: "bulk", Bulk: v},
 		}}
 		i++
 	}
 
-	return Value{typ: "array", array: array}
+	return resp.Value{Typ: "array", Array: array}
 }

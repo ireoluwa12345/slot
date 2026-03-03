@@ -1,4 +1,4 @@
-package main
+package resp
 
 import (
 	"bufio"
@@ -58,7 +58,7 @@ func (r *Reader) readInteger() (x int, n int, err error) {
 func (r *Reader) readBulk() (Value, error) {
 	v := Value{}
 
-	v.typ = "bulk"
+	v.Typ = "bulk"
 
 	len, _, err := r.readInteger()
 	if err != nil {
@@ -69,7 +69,7 @@ func (r *Reader) readBulk() (Value, error) {
 
 	r.reader.Read(bulk)
 
-	v.bulk = string(bulk)
+	v.Bulk = string(bulk)
 
 	r.readLine()
 
@@ -78,7 +78,7 @@ func (r *Reader) readBulk() (Value, error) {
 
 func (r *Reader) readArray() (Value, error) {
 	v := Value{}
-	v.typ = "array"
+	v.Typ = "array"
 
 	// read length of array
 	length, _, err := r.readInteger()
@@ -87,7 +87,7 @@ func (r *Reader) readArray() (Value, error) {
 	}
 
 	// foreach line, parse and read the value
-	v.array = make([]Value, length)
+	v.Array = make([]Value, length)
 	for i := 0; i < length; i++ {
 		val, err := r.Read()
 		if err != nil {
@@ -95,7 +95,7 @@ func (r *Reader) readArray() (Value, error) {
 		}
 
 		// add parsed value to array
-		v.array[i] = val
+		v.Array[i] = val
 	}
 
 	return v, nil
